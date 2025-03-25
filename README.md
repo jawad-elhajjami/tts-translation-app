@@ -1,7 +1,7 @@
 
 # TTS Translation Web App 🌍🔊
 
-#![TTS Translation Web App Screenshot](public/assets/screenshot.JPG)
+![TTS Translation Web App Screenshot](public/assets/screenshot.JPG)
 [This is an external link to genome.gov](https://translation-app-red.vercel.app/)
 
 Welcome to the TTS Translation Web App! 🎉
