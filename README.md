@@ -2,11 +2,11 @@
 # TTS Translation Web App 🌍🔊
 
 ![TTS Translation Web App Screenshot](public/assets/screenshot.JPG)
-[This is an external link to genome.gov](https://translation-app-red.vercel.app/)
+[View app deployed on Vercel](https://translation-app-red.vercel.app/)
 
 Welcome to the TTS Translation Web App! 🎉
 
-This app allows you to translate text and listen to it in different languages using Text-to-Speech (TTS). Simply enter text, select the language, and listen to the translation. 🎧🌐
+This app allows you to translate text and listen to it in different languages and different voices using Text-to-Speech (TTS). Simply enter text, select the language, and listen to the translation. 🎧🌐
 
 ### Features:
 - **Google Cloud Console Translate API** 🌍: Translate text into multiple languages.
@@ -17,7 +17,7 @@ This app allows you to translate text and listen to it in different languages us
 ### How to Use:
 1. Enter the text you want to translate ✍️.
 2. Select your desired language 🌎.
-3. Hit "Translate" and listen to it 🔊.
+3. Hit "Play text" and listen to it 🔊.
 
 Enjoy the app! 😄
 
