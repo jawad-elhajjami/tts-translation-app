@@ -43,5 +43,4 @@ export default async function handler(req, res){
         console.error('Error in API Call')
         res.status(500).json({error: 'Internal Server Error'})
     }
-
 }

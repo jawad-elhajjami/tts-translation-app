@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.card-shadow {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.dark .card-shadow {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+.focus-ring {
+    transition: all 0.2s ease;
+}
+
+.btn-transition {
+    transition: all 0.3s ease;
+}
+
+.sound-wave {
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.sound-wave span {
+    width: 3px;
+    height: 100%;
+    background-color: currentColor;
+    border-radius: 3px;
+    animation: sound-wave-animation 1s ease-in-out infinite;
+    opacity: 0;
+}
+
+.playing .sound-wave span {
+    opacity: 1;
+}
+
+.sound-wave span:nth-child(1) { animation-delay: 0.0s; }
+.sound-wave span:nth-child(2) { animation-delay: 0.1s; }
+.sound-wave span:nth-child(3) { animation-delay: 0.2s; }
+.sound-wave span:nth-child(4) { animation-delay: 0.3s; }
+.sound-wave span:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes sound-wave-animation {
+    0%, 100% { height: 4px; }
+    50% { height: 16px; }
+}
+
+/* Loading spinner animation */
+@keyframes spinner {
+    to {transform: rotate(360deg);}
+}
+
+.spinner:before {
+    content: '';
+    box-sizing: border-box;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin-top: -10px;
+    margin-left: -10px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-bottom-color: currentColor;
+    animation: spinner .8s ease infinite;
+}
