@@ -12,9 +12,9 @@ This app allows you to translate text and listen to it in different languages an
 
 ### Features:
 - **Google Cloud Console Translate API** 🌍: Translate text into multiple languages.
-- **Web Speech API** 🗣️: Listen to translations with TTS support.
+- **Google Text-To-Speech API** 🗣️: Listen to translations with TTS support.
 - **Vercel CLI** 🚀: Deployed seamlessly on Vercel.
-- **Serverless Functions** ⚡: Fast and scalable functions for processing translations.
+- **Serverless Functions** ⚡: Fast and scalable functions for processing translations and text-to-speech.
 - **Darkmode support** : A seamless transition when toggling between light and dark mode.
 
 ### How to Use:
