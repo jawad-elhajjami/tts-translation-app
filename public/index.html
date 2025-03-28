@@ -23,6 +23,18 @@
                             800: '#075985',
                             900: '#0c4a6e',
                         },
+                        green: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        }
                     },
                     animation: {
                         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -34,7 +46,7 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 flex items-center justify-center min-h-screen transition-colors p-4">
-    <div class="card-shadow bg-white dark:bg-gray-800 rounded-2xl p-6 md:p-8 max-w-md w-full">
+    <div class="card-shadow bg-white dark:bg-gray-800 rounded-2xl p-6 md:p-8 max-w-md w-full" id="container">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-gray-800 dark:text-white">
                 TTS & Translation
@@ -72,7 +84,7 @@
             </div>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        <div class="grid grid-cols-1 gap-4 mt-6">
             <!-- Language selection -->
             <div>
                 <label 
@@ -85,30 +97,6 @@
                     <select 
                         name="languageSelect" 
                         id="languageSelect" 
-                        class="w-full p-3 pl-4 pr-10 appearance-none border dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
-                    >
-                        <!-- Will be populated by JavaScript -->
-                    </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 dark:text-gray-400">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Voice selection -->
-            <div>
-                <label 
-                    for="voiceSelect"
-                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                >
-                    Voice
-                </label>
-                <div class="relative">
-                    <select 
-                        name="voiceSelect" 
-                        id="voiceSelect" 
                         class="w-full p-3 pl-4 pr-10 appearance-none border dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
                     >
                         <!-- Will be populated by JavaScript -->
@@ -182,6 +170,10 @@
                 </div>
             </div>
         </button>
+
+        <!-- Download button -->
+        <div id="download_btn_container"></div>
+
     </div>
 
     <script src="script.js"></script>

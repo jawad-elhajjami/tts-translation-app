@@ -1,5 +1,4 @@
 // DOM Elements
-const voiceSelect = document.getElementById("voiceSelect");
 const languageSelect = document.getElementById("languageSelect");
 const playButton = document.getElementById("playButton");
 const textInput = document.getElementById("textInput");
@@ -11,16 +10,24 @@ const pitchControl = document.getElementById("pitchControl");
 let soundWave = document.getElementById("soundWave");
 const htmlElement = document.documentElement;
 
+// Audio control
+let currentAudio = null;
+
 // Array for supported languages with their ISO codes
 const languages = [
-    { code: 'en', name: 'English' },
-    { code: 'ar', name: 'Arabic' },
-    { code: 'fr', name: 'French' },
-    { code: 'es', name: 'Spanish' },
-    { code: 'de', name: 'German' },
-    { code: 'it', name: 'Italian' },
-    { code: 'ru', name: 'Russian' },
-    { code: 'zh-TW', name: 'Traditional Chinese' }, 
+    { code: 'en-US', name: 'English (US)' },
+    { code: 'en-GB', name: 'English (UK)' },
+    { code: 'ar-XA', name: 'Arabic' },
+    { code: 'fr-FR', name: 'French' },
+    { code: 'es-ES', name: 'Spanish' },
+    { code: 'de-DE', name: 'German' },
+    { code: 'it-IT', name: 'Italian' },
+    { code: 'ru-RU', name: 'Russian' },
+    { code: 'cmn-TW', name: 'Chinese (Traditional)' },
+    { code: 'ja-JP', name: 'Japanese' },
+    { code: 'ko-KR', name: 'Korean' },
+    { code: 'pt-BR', name: 'Portuguese (Brazil)' },
+    { code: 'hi-IN', name: 'Hindi' }
 ];
 
 // Dark mode functionality
@@ -135,18 +142,7 @@ function showPlaying(bool) {
 function populateLanguages() {
     languageSelect.innerHTML = languages
         .map((language) =>
-            `<option value=${language.code}>${language.name}</option>`
-        )
-        .join('');
-}
-
-// Load Available voices
-let voices = [];
-function load_voices() {
-    voices = speechSynthesis.getVoices();
-    voiceSelect.innerHTML = voices
-        .map((voice, index) =>
-            `<option value=${index}>${voice.name} (${voice.lang})</option>`
+            `<option value="${language.code}">${language.name}</option>`
         )
         .join('');
 }
@@ -162,7 +158,7 @@ async function translateText(text, targetLang) {
             },
             body: JSON.stringify({
                 text,
-                target: targetLang
+                target: targetLang.split('-')[0] // Extract the language code without region
             })
         });
         if (!response.ok) {
@@ -179,31 +175,110 @@ async function translateText(text, targetLang) {
     }
 }
 
-// TTS
-function playText(text, voiceIndex, speed, pitch) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    if (voices[voiceIndex]) {
-        utterance.voice = voices[voiceIndex];
+// Get audio from Google TTS API and play it
+async function playGoogleTTS(text, lang, speed = 1, pitch = 1) {
+    try {
+        // Show playing animation
+        showPlaying(true);
+        
+        // Stop any currently playing audio
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
+        
+        // Fetch audio from the Google TTS API
+        const response = await fetch('/api/speech', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text,
+                lang,
+                speed,
+                pitch
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${await response.text()}`);
+        }
+        
+        // Get the audio blob
+        const audioBlob = await response.blob();
+        
+        // Create object URL for the audio
+        const audioURL = URL.createObjectURL(audioBlob);
+        
+        // Create audio element and play
+        const audio = new Audio(audioURL);
+        currentAudio = audio;
+        
+        // Set up event listeners
+        audio.onended = () => {
+            showPlaying(false);
+            URL.revokeObjectURL(audioURL);
+            
+            // Show download button after playback
+            showDownloadButton(audioBlob, lang);
+        };
+        
+        audio.onerror = () => {
+            console.error('Audio playback error');
+            showPlaying(false);
+            URL.revokeObjectURL(audioURL);
+        };
+        
+        // Play the audio
+        audio.play();
+        
+    } catch (error) {
+        console.error('TTS Error: ', error);
+        showPlaying(false);
+        alert("Failed to play audio!");
+    }
+}
+
+// Show download button for audio
+function showDownloadButton(audioBlob, lang) {
+    // Create a container for the download button if it doesn't exist
+    let downloadContainer = document.getElementById('downloadContainer');
+    if (!downloadContainer) {
+        downloadContainer = document.createElement('div');
+        downloadContainer.id = 'downloadContainer';
+        downloadContainer.className = 'mt-4';
+        playButton.parentNode.insertBefore(downloadContainer, playButton.nextSibling);
     }
     
-    utterance.rate = speed || 1;
-    utterance.pitch = pitch || 1;
+    // Create URL for download
+    const downloadURL = URL.createObjectURL(audioBlob);
     
-    // Show playing animation
-    showPlaying(true);
+    // Prepare filename with date for uniqueness
+    const date = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `speech-${lang}-${date}.mp3`;
     
-    // Listen for the end of speech to reset button
-    utterance.onend = () => {
-        showPlaying(false);
-    };
+    // Set the HTML content for the download container
+    downloadContainer.innerHTML = `
+        <a href="${downloadURL}" download="${filename}" 
+           class="w-full bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 
+                  text-white font-medium py-3 px-4 rounded-xl focus:outline-none focus:ring-2 
+                  focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 
+                  btn-transition shadow-lg shadow-green-500/20 dark:shadow-green-700/20 
+                  flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>Download Audio</span>
+        </a>
+    `;
     
-    // Listen for errors
-    utterance.onerror = () => {
-        showPlaying(false);
-    };
-    
-    speechSynthesis.speak(utterance);
+    // Add event listener to clean up URL after download
+    downloadContainer.querySelector('a').addEventListener('click', () => {
+        setTimeout(() => {
+            URL.revokeObjectURL(downloadURL);
+        }, 100);
+    });
 }
 
 // Empty text error visual feedback
@@ -227,15 +302,10 @@ function init() {
     // Populate languages
     populateLanguages();
     
-    // Trigger loading voices when they become available
-    speechSynthesis.onvoiceschanged = load_voices;
-    load_voices();
-    
     // Play button event listener
     playButton.addEventListener('click', async () => {
         const text = textInput.value.trim();
         const targetLang = languageSelect.value;
-        const selectedVoiceIndex = voiceSelect.value;
         const speed = speedControl.value;
         const pitch = pitchControl.value;
         
@@ -245,18 +315,26 @@ function init() {
         }
         
         try {
-            // Stop any currently playing speech
-            if (speechSynthesis.speaking) {
-                speechSynthesis.cancel();
+            // If audio is already playing, stop it
+            if (currentAudio && !currentAudio.paused) {
+                currentAudio.pause();
+                currentAudio = null;
                 showPlaying(false);
                 return;
+            }
+            
+            // Remove download button if it exists
+            const downloadContainer = document.getElementById('downloadContainer');
+            if (downloadContainer) {
+                downloadContainer.remove();
             }
             
             // Translate text
             const translatedText = await translateText(text, targetLang);
             
-            // Play text with selected speed and pitch
-            playText(translatedText, selectedVoiceIndex, speed, pitch);
+            // Play text using Google TTS API
+            await playGoogleTTS(translatedText, targetLang, speed, pitch);
+            
         } catch (error) {
             console.error('Error during processing: ', error);
             alert("An error occurred!");
