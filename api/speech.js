@@ -1,68 +1,108 @@
-if(process.env.NODE_ENV !== "production"){
-    (async () => {
-        const dotenv = await import('dotenv');
-        dotenv.config();
-    })()
+// AWS Polly endpoint
+import AWS from 'aws-sdk';
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({error: "Method not allowed!"})
+  }
+
+  // Extract parameters from request body
+  const { text, lang, speed = 1, pitch = 1 } = req.body;
+
+  if (!text) {
+    return res.status(400).json({error: "Missing text!"})
+  }
+
+  console.log("Received request:", { text, lang, speed, pitch });
+
+  try {
+    // Configure AWS
+    AWS.config.update({
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      region: process.env.AWS_REGION || 'us-east-1'
+    });
+
+    const polly = new AWS.Polly();
+    
+    // Get voice ID based on language
+    const voiceId = getPollyVoiceForLanguage(lang);
+    
+    console.log("Using voice:", voiceId);
+    
+    // Create SSML with rate (speed) and pitch adjustments - careful with special characters
+    const cleanText = text.replace(/[<>&]/g, (c) => {
+      return c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;';
+    });
+    
+    const rate = speed < 0.9 ? 'slow' : speed > 1.1 ? 'fast' : 'medium';
+    const pitchValue = Math.round((pitch - 1) * 100);
+    const pitchStr = pitchValue >= 0 ? `+${pitchValue}%` : `${pitchValue}%`;
+    
+    const ssml = `<speak><prosody rate="${rate}" pitch="${pitchStr}">${cleanText}</prosody></speak>`;
+    
+    console.log("SSML:", ssml);
+    
+    // First try with standard engine - more reliable
+    let params = {
+      Text: ssml,
+      TextType: 'ssml',
+      OutputFormat: 'mp3',
+      VoiceId: voiceId,
+      Engine: 'standard'
+    };
+    
+    console.log("Requesting speech synthesis with params:", params);
+    
+    const pollyResult = await polly.synthesizeSpeech(params).promise();
+    
+    // Set headers for audio file
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Disposition', `attachment; filename="speech-${lang}-${Date.now()}.mp3"`);
+    
+    // Send audio data
+    return res.send(pollyResult.AudioStream);
+    
+  } catch (error) {
+    console.error('AWS Polly Error:', error);
+    return res.status(500).json({error: "Failed to generate speech: " + error.message});
+  }
 }
 
-export default async function handler(req, res){
-    if(req.method !== "POST"){
-        return res.status(405).json({error:"Method not allowed!"})
-    }
-
-    const { text, lang, speed = 1, pitch = 1 } = req.body;
-
-    if(!text || !lang){
-        return res.status(405).json({error:"Missing text or target language !"})
-    }
-
-    const apiKey = process.env.GOOGLE_TEXT2SPEECH_API_KEY;
-    const apiUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
-
-    try {
-        const response = await fetch(apiUrl, {
-            method:'POST',
-            headers:{
-                'Content-Type':'application/json',
-            },
-            body:JSON.stringify({
-                input: { text },
-                voice: { languageCode: lang },
-                audioConfig: {
-                    audioEncoding: 'MP3',
-                    speakingRate: parseFloat(speed),
-                    pitch: parseFloat(pitch)
-                }
-            })
-        });
-        
-        if(!response.ok){
-            const errorText = await response.text();
-            console.error('Google API error:', errorText);
-            return res.status(response.status).json({error: errorText});
-        }
-        
-        // Parse the JSON response
-        const data = await response.json();
-        
-        // Extract the base64 audio content
-        const audioContent = data.audioContent;
-        
-        if (!audioContent) {
-            return res.status(500).json({error: "No audio content returned from Google API"});
-        }
-        
-        // Convert base64 to buffer
-        const audioBuffer = Buffer.from(audioContent, 'base64');
-        
-        // Set headers for binary audio response
-        res.setHeader('Content-Type', 'audio/mpeg');
-        res.setHeader('Content-Disposition', `attachment; filename="speech-${lang}-${Date.now()}.mp3"`);
-        
-        // Send the binary audio data
-        res.send(audioBuffer);
-    } catch (error) {
-        console.error('Error generating speech with Google Cloud TTS:', error);
-        res.status(500).send(error);
-    }
+// Helper function to map language codes to Polly voices
+function getPollyVoiceForLanguage(langCode) {
+  // Map language codes to appropriate Polly voices
+  // Use only official AWS Polly voice IDs
+  const voiceMap = {
+    'en-US': 'Matthew',
+    'en-GB': 'Amy',
+    'fr-FR': 'Lea',  // Note: No accent mark
+    'de-DE': 'Vicki',
+    'es-ES': 'Lucia',
+    'it-IT': 'Bianca',
+    'ja-JP': 'Takumi',
+    'pt-BR': 'Camila',
+    'arb': 'Zeina',
+    'ar': 'Zeina',
+    'cmn-CN': 'Zhiyu',
+    'hi-IN': 'Aditi',
+    'ko-KR': 'Seoyeon'
+  };
+  
+  // Also handle short language codes
+  const shortCodeMap = {
+    'en': 'Matthew',
+    'fr': 'Lea',  // Note: No accent mark
+    'de': 'Vicki',
+    'es': 'Lucia',
+    'it': 'Bianca',
+    'pt': 'Camila',
+    'ar': 'Zeina',
+    'zh': 'Zhiyu',
+    'hi': 'Aditi',
+    'ja': 'Takumi',
+    'ko': 'Seoyeon'
+  };
+  
+  return voiceMap[langCode] || shortCodeMap[langCode] || 'Joanna'; // Default voice if language not found
 }

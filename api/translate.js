@@ -1,46 +1,45 @@
-if(process.env.NODE_ENV !== "production"){
-    (async () => {
-        const dotenv = await import('dotenv');
-        dotenv.config();
-    })()
-}
-export default async function handler(req, res){
-    if(req.method !== "POST"){
-        return res.status(405).json({error:"Method not allowed !"})
-    }
-    const {text, target} = req.body;
+// AWS Translate endpoint (replace your /api/translate endpoint)
+import AWS from 'aws-sdk';
 
-    if(!text || !target){
-        return res.status(400).json({error: 'Missing text or language'})
-    }
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({error: "Method not allowed!"})
+  }
 
-    const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
-    const apiUrl = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`
+  const { text, target } = req.body;
 
+  if (!text || !target) {
+    return res.status(405).json({error: "Missing text or target language!"})
+  }
 
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers:{
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                q: text,
-                target: target,
-                format: 'text'
-            })
-        })
+  // Configure AWS
+  AWS.config.update({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION || 'us-east-1'
+  });
 
-        if(!response.ok){
-            const errorText = await response.text()
-            return res.status(response.status).json({error: errorText})
-        }
+  const translate = new AWS.Translate();
 
-        const data = await response.json()
-        res.status(200).json(data)
+  try {
+    const params = {
+      Text: text,
+      SourceLanguageCode: 'auto', // Auto-detect source language
+      TargetLanguageCode: target
+    };
 
-    } catch (error) {
-        console.error('Error in API Call')
-        res.status(500).json({error: 'Internal Server Error'})
-    }
+    const translateResult = await translate.translateText(params).promise();
+    
+    // Format response to match your existing format
+    res.status(200).json({
+      data: {
+        translations: [{
+          translatedText: translateResult.TranslatedText
+        }]
+      }
+    });
+  } catch (error) {
+    console.error('AWS Translation Error:', error);
+    res.status(500).json({error: "Failed to translate text"});
+  }
 }
