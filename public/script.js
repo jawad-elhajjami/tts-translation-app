@@ -1,4 +1,4 @@
-// DOM Elements
+// DOM Elements - using const for all elements
 const languageSelect = document.getElementById("languageSelect");
 const playButton = document.getElementById("playButton");
 const textInput = document.getElementById("textInput");
@@ -7,17 +7,33 @@ const copyButton = document.getElementById("copyButton");
 const darkModeToggle = document.getElementById("darkModeToggle");
 const speedControl = document.getElementById("speedControl");
 const pitchControl = document.getElementById("pitchControl");
-let soundWave = document.getElementById("soundWave");
 const htmlElement = document.documentElement;
 const downloadBtnContainer = document.getElementById("download_btn_container");
+const recordButton = document.querySelector('#recordBtn');
 
-// Audio control
+// Global state
 let currentAudio = null;
+let isRecording = false;
+let soundWave = null; // Will be assigned when needed
+
+// Speech recognition setup
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+
+// Only initialize speech recognition if it's available in the browser
+if (SpeechRecognition && recordButton) {
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    
+    // Initialize speech recognition events
+    initSpeechRecognition();
+}
 
 // Languages supported by AWS Translate and Polly
 const languages = [
     { code: 'en', name: 'English (US)', voiceCode: 'en-US' },
-    { code: 'en', name: 'English (UK)', voiceCode: 'en-GB' },
+    { code: 'en-GB', name: 'English (UK)', voiceCode: 'en-GB' },
     { code: 'fr', name: 'French', voiceCode: 'fr-FR' },
     { code: 'es', name: 'Spanish', voiceCode: 'es-ES' },
     { code: 'de', name: 'German', voiceCode: 'de-DE' },
@@ -30,23 +46,55 @@ const languages = [
     { code: 'zh', name: 'Chinese (Mandarin)', voiceCode: 'cmn-CN' },
 ];
 
+// Speech recognition initialization
+function initSpeechRecognition() {
+    if (!recognition || !recordButton) return;
+    
+    // Toggle recording state
+    recordButton.addEventListener('click', () => {
+        if (isRecording) {
+            recordButton.textContent = 'Record audio';
+            recognition.stop();
+            isRecording = false;
+        } else {
+            recognition.start();
+            isRecording = true;
+            recordButton.textContent = 'Stop recording';
+        }
+    });
+    
+    // Handle speech recognition events
+    recognition.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        textInput.value = transcript;
+    };
+    
+    recognition.onerror = (event) => {
+        recognition.stop();
+        isRecording = false;
+        recordButton.textContent = 'Record audio';
+        console.error(`Speech recognition error: ${event.error}`);
+    };
+    
+    recognition.onnomatch = () => {
+        console.log('No speech match found');
+    };
+}
+
 // Dark mode functionality
 function initDarkMode() {
     // Check for user preference
-    if (localStorage.getItem('darkMode') === 'enabled' || 
+    const isDarkMode = localStorage.getItem('darkMode') === 'enabled' || 
         (localStorage.getItem('darkMode') !== 'disabled' && 
-         window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+         window.matchMedia('(prefers-color-scheme: dark)').matches);
+         
+    if (isDarkMode) {
         htmlElement.classList.add('dark');
     }
     
     darkModeToggle.addEventListener('click', () => {
-        if (htmlElement.classList.contains('dark')) {
-            htmlElement.classList.remove('dark');
-            localStorage.setItem('darkMode', 'disabled');
-        } else {
-            htmlElement.classList.add('dark');
-            localStorage.setItem('darkMode', 'enabled');
-        }
+        const isDark = htmlElement.classList.toggle('dark');
+        localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');
     });
 }
 
@@ -58,24 +106,25 @@ function initTextareaButtons() {
     });
     
     copyButton.addEventListener('click', () => {
-        if (textInput.value) {
-            navigator.clipboard.writeText(textInput.value)
-                .then(() => {
-                    // Show a quick notification or change the icon briefly
+        if (!textInput.value) return;
+        
+        navigator.clipboard.writeText(textInput.value)
+            .then(() => {
+                // Show a quick notification or change the icon briefly
+                copyButton.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                `;
+                setTimeout(() => {
                     copyButton.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                         </svg>
                     `;
-                    setTimeout(() => {
-                        copyButton.innerHTML = `
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                            </svg>
-                        `;
-                    }, 2000);
-                });
-        }
+                }, 2000);
+            })
+            .catch(err => console.error('Failed to copy text:', err));
     });
 }
 
@@ -140,38 +189,33 @@ function showPlaying(bool) {
 
 // Populate languages select box
 function populateLanguages() {
-    // Create a set of unique language codes for selection
-    const uniqueLanguages = [];
-    const seenCodes = new Set();
+    // Create a map to get unique languages by code
+    const uniqueLanguages = {};
     
+    // Keep only first occurrence of each language code
     languages.forEach(lang => {
-        // Only add the first occurrence of each language code
-        if (!seenCodes.has(lang.code)) {
-            uniqueLanguages.push(lang);
-            seenCodes.add(lang.code);
+        if (!uniqueLanguages[lang.code]) {
+            uniqueLanguages[lang.code] = lang;
         }
     });
     
-    languageSelect.innerHTML = uniqueLanguages
-        .map((language) =>
-            `<option value="${language.code}">${language.name}</option>`
-        )
+    // Convert to array and generate HTML
+    const options = Object.values(uniqueLanguages)
+        .map(language => `<option value="${language.code}">${language.name}</option>`)
         .join('');
+        
+    languageSelect.innerHTML = options;
 }
 
 // Translate text using AWS Translate API
 async function translateText(text, targetLang) {
     showLoading(true);
+    
     try {
         const response = await fetch('/api/translate', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                text,
-                target: targetLang
-            })
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text, target: targetLang})
         });
         
         if (!response.ok) {
@@ -182,26 +226,25 @@ async function translateText(text, targetLang) {
         return data.data?.translations?.[0]?.translatedText || text;
     } catch (error) {
         console.error('Translation Error:', error);
-        alert("Failed to translate text! Using original text instead.");
-        return text;
+        return text; // Fallback to original text
     } finally {
         showLoading(false);
     }
 }
 
+// Get language voice code
+function getLanguageVoiceCode(langCode) {
+    const language = languages.find(l => l.code === langCode);
+    return language ? language.voiceCode : langCode;
+}
+
 // Function to handle audio playback and download
-async function showDownloadButton(text, lang, speed = 1, pitch = 1) {
+async function processAudio(text, lang, speed = 1, pitch = 1) {
     try {
-        // Match the language format to your speech.js
-        const languageCode = languages.find(l => l.code === lang)?.voiceCode || lang;
+        // Get the correct language code for speech
+        const languageCode = getLanguageVoiceCode(lang);
         
-        // For debugging
-        console.log("Calling speech API with:", {
-            text,
-            lang: languageCode,
-            speed,
-            pitch
-        });
+        console.log("Calling speech API with:", { text, lang: languageCode, speed, pitch });
         
         // Show playing animation
         showPlaying(true);
@@ -209,12 +252,10 @@ async function showDownloadButton(text, lang, speed = 1, pitch = 1) {
         // Fetch the speech from the AWS Polly API
         const response = await fetch('/api/speech', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 text,
-                lang: languageCode, // Use the language code that matches speech.js
+                lang: languageCode,
                 speed,
                 pitch
             })
@@ -222,16 +263,29 @@ async function showDownloadButton(text, lang, speed = 1, pitch = 1) {
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("Speech API error:", errorText);
             throw new Error(`Error ${response.status}: ${errorText}`);
         }
         
-        // Get the audio blob
+        // Get the audio blob and create URL
         const audioBlob = await response.blob();
-        
-        // Create URL for the blob
         const audioURL = URL.createObjectURL(audioBlob);
         
+        // Create and play audio
+        await playAudio(audioURL);
+        
+        // Create the download button
+        createDownloadButton(audioURL, languageCode);
+        
+    } catch (error) {
+        console.error('TTS Error:', error);
+        showPlaying(false);
+        alert("Failed to generate audio. See console for details.");
+    }
+}
+
+// Play audio and handle events
+function playAudio(audioURL) {
+    return new Promise((resolve, reject) => {
         // Create audio element and play it
         const audio = new Audio(audioURL);
         currentAudio = audio;
@@ -239,44 +293,43 @@ async function showDownloadButton(text, lang, speed = 1, pitch = 1) {
         // Set up event listeners
         audio.onended = () => {
             showPlaying(false);
+            resolve();
         };
         
         audio.onerror = (error) => {
             console.error('Audio playback error:', error);
             showPlaying(false);
+            reject(error);
         };
         
         // Play the audio
-        await audio.play();
-        
-        // Create the download button
-        downloadBtnContainer.innerHTML = `
-            <a href="${audioURL}" 
-               class="mt-6 w-full bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 
-                     text-white font-medium py-4 px-4 rounded-xl focus:outline-none focus:ring-2 
-                     focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 
-                     btn-transition shadow-lg shadow-green-500/20 dark:shadow-green-700/20 
-                     flex items-center justify-center" 
-               download="TTS-${languageCode}-${Math.random().toString(36).substring(2, 8)}.mp3">
-               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-               </svg>
-               Download Audio
-            </a>
-        `;
-        
-        // Clean up the URL when the download is complete
-        downloadBtnContainer.querySelector('a').addEventListener('click', () => {
-            setTimeout(() => {
-                URL.revokeObjectURL(audioURL);
-            }, 100);
-        });
-        
-    } catch (error) {
-        console.error('TTS Error:', error);
-        showPlaying(false);
-        alert("Failed to generate audio! Please check console for details.");
-    }
+        audio.play().catch(reject);
+    });
+}
+
+// Create download button
+function createDownloadButton(audioURL, languageCode) {
+    const filename = `TTS-${languageCode}-${Math.random().toString(36).substring(2, 8)}.mp3`;
+    
+    downloadBtnContainer.innerHTML = `
+        <a href="${audioURL}" 
+           class="mt-6 w-full bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 
+                 text-white font-medium py-4 px-4 rounded-xl focus:outline-none focus:ring-2 
+                 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 
+                 btn-transition shadow-lg shadow-green-500/20 dark:shadow-green-700/20 
+                 flex items-center justify-center" 
+           download="${filename}">
+           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+           </svg>
+           Download Audio
+        </a>
+    `;
+    
+    // Clean up the URL when the download is complete
+    downloadBtnContainer.querySelector('a').addEventListener('click', () => {
+        setTimeout(() => URL.revokeObjectURL(audioURL), 100);
+    });
 }
 
 // Empty text error visual feedback
@@ -287,6 +340,49 @@ function showEmptyTextError() {
         playButton.classList.remove('animate-pulse-slow');
         textInput.classList.remove('ring-2', 'ring-red-400');
     }, 1000);
+}
+
+// Stop audio playback
+function stopAudio() {
+    if (currentAudio && !currentAudio.paused) {
+        currentAudio.pause();
+        currentAudio.src = '';
+        currentAudio = null;
+        showPlaying(false);
+        return true;
+    }
+    return false;
+}
+
+// Handle play button click
+async function handlePlayButtonClick() {
+    const text = textInput.value.trim();
+    const targetLang = languageSelect.value;
+    const speed = speedControl.value;
+    const pitch = pitchControl.value;
+    
+    if (!text) {
+        showEmptyTextError();
+        return;
+    }
+    
+    try {
+        // If audio is already playing, stop it and exit
+        if (stopAudio()) return;
+        
+        // Clear the download button container
+        downloadBtnContainer.innerHTML = '';
+        
+        // Translate text
+        const translatedText = await translateText(text, targetLang);
+        
+        // Process audio (play and create download button)
+        await processAudio(translatedText, targetLang, speed, pitch);
+        
+    } catch (error) {
+        console.error('Error during processing:', error);
+        alert("An error occurred!");
+    }
 }
 
 // Initialize the application
@@ -301,41 +397,10 @@ function init() {
     populateLanguages();
     
     // Play button event listener
-    playButton.addEventListener('click', async () => {
-        const text = textInput.value.trim();
-        const targetLang = languageSelect.value;
-        const speed = speedControl.value;
-        const pitch = pitchControl.value;
-        
-        if (!text) {
-            showEmptyTextError();
-            return;
-        }
-        
-        try {
-            // If audio is already playing, stop it
-            if (currentAudio && !currentAudio.paused) {
-                currentAudio.pause();
-                currentAudio.src = '';
-                currentAudio = null;
-                showPlaying(false);
-                return;
-            }
-            
-            // Clear the download button container
-            downloadBtnContainer.innerHTML = '';
-            
-            // Translate text
-            const translatedText = await translateText(text, targetLang);
-            
-            // Get the speech and show download button
-            await showDownloadButton(translatedText, targetLang, speed, pitch);
-            
-        } catch (error) {
-            console.error('Error during processing:', error);
-            alert("An error occurred!");
-        }
-    });
+    playButton.addEventListener('click', handlePlayButtonClick);
+    
+    // Initialize soundWave reference
+    soundWave = document.getElementById("soundWave");
 }
 
 // Initialize the app when the DOM is loaded
